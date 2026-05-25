@@ -3,14 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Zap, Eye, EyeOff, Mail, Lock, AlertCircle, ChevronRight } from 'lucide-react';
 import { signIn } from '../firebase/auth';
 import { useAuth } from '../context/AuthContext';
-import { DEMO_USER, DEMO_SETTINGS } from '../data/demoData';
 import toast from 'react-hot-toast';
-
-const DEMO_CREDENTIALS = [
-  { email: 'admin@smartpos.com', password: 'admin123', role: 'Admin', color: 'indigo' },
-  { email: 'manager@smartpos.com', password: 'manager123', role: 'Manager', color: 'emerald' },
-  { email: 'cashier@smartpos.com', password: 'cashier123', role: 'Cashier', color: 'amber' },
-];
 
 export default function Login() {
   const navigate = useNavigate();
@@ -27,48 +20,20 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Try Firebase auth first
-      await signIn(email, password);
-      toast.success('Welcome back!');
-      navigate('/dashboard');
-    } catch (err: any) {
-      // Demo mode fallback - works without real Firebase
-      if (email === 'admin@smartpos.com' && password === 'admin123') {
-        setIsDemoMode(true);
-        // Set demo user in localStorage for demo mode
-        localStorage.setItem('smartpos-demo-user', JSON.stringify({
-          ...DEMO_USER,
-          email,
-          role: 'admin'
-        }));
-        toast.success('Welcome to SmartPOS Demo!');
-        navigate('/dashboard');
-        return;
-      } else if (email === 'manager@smartpos.com' && password === 'manager123') {
-        localStorage.setItem('smartpos-demo-user', JSON.stringify({
-          ...DEMO_USER,
-          uid: 'demo-manager-001',
-          email,
-          displayName: 'Store Manager',
-          role: 'manager'
-        }));
-        toast.success('Welcome Manager!');
-        navigate('/dashboard');
-        return;
-      } else if (email === 'cashier@smartpos.com' && password === 'cashier123') {
-        localStorage.setItem('smartpos-demo-user', JSON.stringify({
-          ...DEMO_USER,
-          uid: 'demo-cashier-001',
-          email,
-          displayName: 'Cashier',
-          role: 'cashier'
-        }));
-        toast.success('Welcome Cashier!');
-        navigate('/dashboard');
-        return;
-      }
-      
-      setError('Invalid email or password. Try the demo credentials below.');
+  // Try Firebase auth first
+  await signIn(email, password);
+
+  toast.success('Welcome back!');
+  navigate('/dashboard');
+
+} catch (err: any) {
+  console.error(err);
+  setError('Invalid email or password');
+} finally {
+  setLoading(false);
+}
+    
+      setError('Invalid email or password.');
     } finally {
       setLoading(false);
     }
