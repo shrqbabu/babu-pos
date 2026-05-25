@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useState } from 'react';
 import { Layout } from '../components/layout/Layout';
@@ -55,7 +55,6 @@ export default function Products() {
   const [form, setForm] = useState<typeof defaultForm>(defaultForm);
   const [loading, setLoading] = useState(false);
 
-  // Filter products
   const filtered = products.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search);
     const matchCat = !filterCategory || p.categoryId === filterCategory;
@@ -80,6 +79,8 @@ export default function Products() {
     setShowModal(true);
   };
 
+  // ✅ FIX 1: handleSave aur handleDelete alag functions hain
+  // Pehle dono ek saath mix ho gaye the — handleDelete ka code handleSave ke andar tha
   const handleSave = async () => {
     if (!form.name || !form.price) {
       toast.error('Name and price are required');
@@ -88,8 +89,11 @@ export default function Products() {
     setLoading(true);
 
     const cat = DEMO_CATEGORIES.find(c => c.id === form.categoryId);
+
+    // ✅ FIX 2: id mein backtick + extra quote tha: id: editingProduct?.id || ''`
+    // Fix: id: editingProduct?.id || ''
     const productData: Product = {
-      id: editingProduct?.id || ''`,
+      id: editingProduct?.id || '',
       name: form.name,
       price: parseFloat(form.price),
       stock: parseInt(form.stock) || 0,
@@ -105,54 +109,37 @@ export default function Products() {
     };
 
     try {
+      if (editingProduct) {
+        await updateDoc(doc(db, 'products', editingProduct.id), { ...productData });
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? productData : p));
+        toast.success('Product updated successfully');
+      } else {
+        const docRef = await addDoc(collection(db, 'products'), productData);
+        setProducts(prev => [{ ...productData, id: docRef.id }, ...prev]);
+        toast.success('Product added successfully');
+      }
+      setShowModal(false);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to save product');
+    }
 
-  if (editingProduct) {
+    setLoading(false);
+  };
 
-    await updateDoc(doc(db, 'products', editingProduct.id), {
-      ...productData
-    });
-
-    setProducts(prev =>
-      prev.map(p => p.id === editingProduct.id ? productData : p)
-    );
-
-    toast.success('Product updated successfully');
-
-  } else {
-
-    const docRef = await addDoc(collection(db, 'products'), productData);
-
-    setProducts(prev => [
-      { ...productData, id: docRef.id },
-      ...prev
-    ]);
-
-    toast.success('Product added successfully');
-  }
-
-  setShowModal(false);
-
-} catch (error) {
-  console.error(error);
-  toast.error('Failed to save product');
-}
-
-setLoading(false);
-
-  try {
-
-  await deleteDoc(doc(db, 'products', deleteId));
-
-  setProducts(prev => prev.filter(p => p.id !== deleteId));
-
-  toast.success('Product deleted');
-
-} catch (error) {
-  console.error(error);
-  toast.error('Failed to delete product');
-}
-
-setDeleteId(null);
+  // ✅ FIX 3: handleDelete bilkul missing tha — alag function banana tha
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteDoc(doc(db, 'products', deleteId));
+      setProducts(prev => prev.filter(p => p.id !== deleteId));
+      toast.success('Product deleted');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete product');
+    }
+    setDeleteId(null);
+  };
 
   const stats = {
     total: products.length,
@@ -176,13 +163,16 @@ setDeleteId(null);
         </div>
       )
     },
-    { key: 'category', title: 'Category',
+    {
+      key: 'category', title: 'Category',
       render: (_: any, row: Product) => <span className="text-sm text-slate-600 dark:text-slate-400">{row.category}</span>
     },
-    { key: 'price', title: 'Price', align: 'right' as const,
+    {
+      key: 'price', title: 'Price', align: 'right' as const,
       render: (v: number) => <span className="text-sm font-semibold text-slate-900 dark:text-white">₹{v.toLocaleString()}</span>
     },
-    { key: 'stock', title: 'Stock', align: 'center' as const,
+    {
+      key: 'stock', title: 'Stock', align: 'center' as const,
       render: (v: number, row: Product) => (
         <div className="flex items-center justify-center gap-1">
           {v === 0
@@ -194,10 +184,12 @@ setDeleteId(null);
         </div>
       )
     },
-    { key: 'taxRate', title: 'Tax', align: 'center' as const,
+    {
+      key: 'taxRate', title: 'Tax', align: 'center' as const,
       render: (v: number) => <span className="text-xs text-slate-500">{v}%</span>
     },
-    { key: 'status', title: 'Status', align: 'center' as const,
+    {
+      key: 'status', title: 'Status', align: 'center' as const,
       render: (v: string) => <Badge variant={v === 'active' ? 'success' : 'default'}>{v}</Badge>
     },
     {
@@ -229,14 +221,20 @@ setDeleteId(null);
         ].map((stat) => (
           <Card key={stat.label}>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{stat.label}</p>
-            <p className={`text-2xl font-bold text-${stat.color}-600 dark:text-${stat.color}-400`}>{stat.value}</p>
+            {/* ✅ FIX 4: template literal string tha text-${color}-600 — esbuild parse nahi kar pa raha tha */}
+            {/* Fix: inline style use kiya taaki Tailwind purge bhi na kare */}
+            <p className="text-2xl font-bold" style={{
+              color: stat.color === 'indigo' ? '#4f46e5'
+                : stat.color === 'emerald' ? '#059669'
+                : stat.color === 'red' ? '#dc2626'
+                : '#d97706'
+            }}>{stat.value}</p>
           </Card>
         ))}
       </div>
 
       {/* Products Table */}
       <Card padding={false}>
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-5 border-b border-slate-100 dark:border-slate-700">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -249,7 +247,7 @@ setDeleteId(null);
                 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-white"
             />
           </div>
-          
+
           <div className="flex items-center gap-2 flex-shrink-0">
             <select
               value={filterCategory}
@@ -260,7 +258,7 @@ setDeleteId(null);
               <option value="">All Categories</option>
               {DEMO_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            
+
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
@@ -311,7 +309,7 @@ setDeleteId(null);
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
             />
           </div>
-          
+
           <Input
             label="Price (₹) *"
             type="number"
@@ -319,7 +317,7 @@ setDeleteId(null);
             value={form.price}
             onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
           />
-          
+
           <Input
             label="Stock Quantity"
             type="number"
