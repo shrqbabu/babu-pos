@@ -5,9 +5,11 @@ import { Badge } from '../components/ui/Badge';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
-import { DEMO_ORDERS } from '../data/demoData';
 import { Search, ShoppingCart, Eye, Calendar, Filter, Download } from 'lucide-react';
 import { format } from 'date-fns';
+import { useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const formatCurrency = (v: number) => `₹${v.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
@@ -20,14 +22,26 @@ export default function Orders() {
   const [viewOrder, setViewOrder] = useState<any>(null);
 
   // Combine demo + localStorage orders
-  const allOrders = useMemo(() => {
-    const saved = JSON.parse(localStorage.getItem('smartpos-orders') || '[]');
-    const savedWithDate = saved.map((o: any) => ({
-      ...o,
-      createdAt: { toDate: () => new Date(o.createdAt) }
-    }));
-    return [...savedWithDate, ...DEMO_ORDERS];
-  }, []);
+ const [allOrders, setAllOrders] = useState<any[]>([]);
+
+useEffect(() => {
+  const fetchOrders = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'orders'));
+
+      const firebaseOrders = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setAllOrders(firebaseOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  };
+
+  fetchOrders();
+}, []);
 
   const filtered = allOrders.filter((o: any) => {
     const matchSearch = !search || o.orderId?.toLowerCase().includes(search.toLowerCase()) ||
