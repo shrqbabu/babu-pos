@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, Eye, EyeOff, Mail, Lock, AlertCircle, ChevronRight } from 'lucide-react';
-import { signIn } from '../firebase/auth';
+import { signIn, onAuthChange } from '../firebase/auth'; // ✅ onAuthChange add kiya
 import toast from 'react-hot-toast';
 
 const DEMO_CREDENTIALS = [
