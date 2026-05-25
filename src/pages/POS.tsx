@@ -1,3 +1,6 @@
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Layout } from '../components/layout/Layout';
 import { useApp, Product, CartItem } from '../context/AppContext';
@@ -42,7 +45,33 @@ export default function POS() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Products - use demo data
-  const products = DEMO_PRODUCTS;
+  const [products, setProducts] = useState<Product[]>([]);
+  useEffect(() => {
+  const fetchProducts = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'products'));
+
+      if (!snapshot.empty) {
+        const firebaseProducts = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Product[];
+
+        setProducts(firebaseProducts);
+
+      } else {
+        setProducts(DEMO_PRODUCTS);
+      }
+
+    } catch (error) {
+      console.error(error);
+
+      setProducts(DEMO_PRODUCTS);
+    }
+  };
+
+  fetchProducts();
+}, []);
   const categories = [{ id: 'all', name: 'All Items', icon: '🏪' }, ...DEMO_CATEGORIES];
 
   // Filter products
@@ -126,15 +155,13 @@ export default function POS() {
         customerId: selectedCustomer?.id || null,
         customerName: selectedCustomer?.name || 'Walk-in Customer',
         customerPhone: selectedCustomer?.phone || null,
-        cashierName: 'Demo Admin',
+        currentUser.displayName,
         status: 'completed',
         createdAt: new Date()
       };
 
       // Save to localStorage for demo mode
-      const existingOrders = JSON.parse(localStorage.getItem('smartpos-orders') || '[]');
-      existingOrders.unshift(order);
-      localStorage.setItem('smartpos-orders', JSON.stringify(existingOrders.slice(0, 100)));
+      await addDoc(collection(db, 'orders'), order);
 
       setLastOrder(order);
       clearCart();
