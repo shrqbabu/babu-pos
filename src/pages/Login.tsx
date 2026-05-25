@@ -44,7 +44,7 @@ export default function Login() {
       if (user) {
         unsubscribe();
         setLoading(false);
-        navigate('/Dashboard', { replace: true });
+        navigate('/dashboard', { replace: true });
       }
     });
 
@@ -54,7 +54,6 @@ export default function Login() {
     setLoading(false);
   }
 };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex">
       {/* Left Panel - Branding */}
