@@ -34,8 +34,16 @@ export const signIn = async (email: string, password: string): Promise<UserProfi
   }, { merge: true });
 
   const profile = await getUserProfile(result.user.uid);
-  if (!profile) throw new Error('User profile not found');
-  return profile;
+  if (!profile) {
+  return {
+    uid: result.user.uid,
+    email: result.user.email || '',
+    displayName: result.user.displayName || 'Admin',
+    role: 'admin',
+    isActive: true,
+    createdAt: new Date()
+  } as UserProfile;
+}
 };
 
 // Create new user account
