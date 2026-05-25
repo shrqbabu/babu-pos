@@ -1,4 +1,3 @@
-// Firebase Authentication Service
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -24,18 +23,28 @@ export interface UserProfile {
   lastLogin?: any;
 }
 
-// ✅ FIX: return statement missing tha — profile return nahi ho raha tha
-export const signIn = async (email: string, password: string): Promise<UserProfile> => {
+export const signIn = async (
+  email: string,
+  password: string
+): Promise<UserProfile> => {
+  
+  // Step 1: Sirf login karo pehle
   const result = await signInWithEmailAndPassword(auth, email, password);
 
-  // Last login update karo
-  await setDoc(doc(db, 'users', result.user.uid), {
-    lastLogin: serverTimestamp()
-  }, { merge: true });
+  // Step 2: Auth fully settle hone ka wait karo
+  await auth.authStateReady();
 
+  // Step 3: Profile fetch karo
   const profile = await getUserProfile(result.user.uid);
 
-  // ✅ FIX: agar Firestore mein profile nahi hai toh bhi kaam kare
+  // Step 4: lastLogin background mein update karo - await mat karo
+  // Ye fail ho bhi jaye to login nahi rukna chahiye
+  setDoc(doc(db, 'users', result.user.uid), {
+    lastLogin: serverTimestamp()
+  }, { merge: true }).catch(err => {
+    console.warn('lastLogin update failed:', err);
+  });
+
   if (!profile) {
     const fallback: UserProfile = {
       uid: result.user.uid,
@@ -45,20 +54,18 @@ export const signIn = async (email: string, password: string): Promise<UserProfi
       isActive: true,
       createdAt: new Date()
     };
-    return fallback; // ✅ return tha hi nahi pehle
+    return fallback;
   }
 
-  return profile; // ✅ yeh bhi missing tha
+  return profile;
 };
 
-// Naya user banao
 export const createUser = async (
   email: string,
   password: string,
   userData: Omit<UserProfile, 'uid' | 'createdAt'>
 ): Promise<UserProfile> => {
   const result = await createUserWithEmailAndPassword(auth, email, password);
-
   await updateProfile(result.user, { displayName: userData.displayName });
 
   const profile: UserProfile = {
@@ -71,22 +78,24 @@ export const createUser = async (
   return profile;
 };
 
-// Firestore se user profile lo
-export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
-  const docSnap = await getDoc(doc(db, 'users', uid));
-  if (docSnap.exists()) {
-    return docSnap.data() as UserProfile;
+export const getUserProfile = async (
+  uid: string
+): Promise<UserProfile | null> => {
+  try {
+    const docSnap = await getDoc(doc(db, 'users', uid));
+    if (docSnap.exists()) {
+      return docSnap.data() as UserProfile;
+    }
+    return null;
+  } catch (err) {
+    console.warn('getUserProfile error:', err);
+    return null;
   }
-  return null;
 };
 
-// Sign out
 export const logOut = () => signOut(auth);
-
-// Password reset email
-export const resetPassword = (email: string) => sendPasswordResetEmail(auth, email);
-
-// Auth state observer
+export const resetPassword = (email: string) => 
+  sendPasswordResetEmail(auth, email);
 export const onAuthChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, callback);
 };
