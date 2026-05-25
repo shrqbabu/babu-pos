@@ -1,36 +1,32 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: string[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
-  // Check demo mode auth
-  const demoUser = localStorage.getItem('smartpos-demo-user');
-  
-  if (!demoUser) {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requiredRole,
+}) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole) {
-    const user = JSON.parse(demoUser);
+  // Optional role check
+  if (requiredRole && user.role) {
     if (!requiredRole.includes(user.role)) {
       return <Navigate to="/dashboard" replace />;
     }
   }
 
   return <>{children}</>;
-};
-
-// Hook to get current demo user
-export const useDemoUser = () => {
-  const stored = localStorage.getItem('smartpos-demo-user');
-  if (!stored) return null;
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return null;
-  }
 };
