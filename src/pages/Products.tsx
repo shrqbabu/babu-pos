@@ -1,3 +1,5 @@
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { useState } from 'react';
 import { Layout } from '../components/layout/Layout';
 import { Card } from '../components/ui/Card';
@@ -43,7 +45,7 @@ const defaultForm = {
 };
 
 export default function Products() {
-  const [products, setProducts] = useState<Product[]>(DEMO_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -87,7 +89,7 @@ export default function Products() {
 
     const cat = DEMO_CATEGORIES.find(c => c.id === form.categoryId);
     const productData: Product = {
-      id: editingProduct?.id || `p-${Date.now()}`,
+      id: editingProduct?.id || ''`,
       name: form.name,
       price: parseFloat(form.price),
       stock: parseInt(form.stock) || 0,
@@ -102,25 +104,55 @@ export default function Products() {
       image: form.image
     };
 
-    setTimeout(() => {
-      if (editingProduct) {
-        setProducts(prev => prev.map(p => p.id === editingProduct.id ? productData : p));
-        toast.success('Product updated successfully');
-      } else {
-        setProducts(prev => [productData, ...prev]);
-        toast.success('Product added successfully');
-      }
-      setShowModal(false);
-      setLoading(false);
-    }, 500);
-  };
+    try {
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    setProducts(prev => prev.filter(p => p.id !== deleteId));
-    setDeleteId(null);
-    toast.success('Product deleted');
-  };
+  if (editingProduct) {
+
+    await updateDoc(doc(db, 'products', editingProduct.id), {
+      ...productData
+    });
+
+    setProducts(prev =>
+      prev.map(p => p.id === editingProduct.id ? productData : p)
+    );
+
+    toast.success('Product updated successfully');
+
+  } else {
+
+    const docRef = await addDoc(collection(db, 'products'), productData);
+
+    setProducts(prev => [
+      { ...productData, id: docRef.id },
+      ...prev
+    ]);
+
+    toast.success('Product added successfully');
+  }
+
+  setShowModal(false);
+
+} catch (error) {
+  console.error(error);
+  toast.error('Failed to save product');
+}
+
+setLoading(false);
+
+  try {
+
+  await deleteDoc(doc(db, 'products', deleteId));
+
+  setProducts(prev => prev.filter(p => p.id !== deleteId));
+
+  toast.success('Product deleted');
+
+} catch (error) {
+  console.error(error);
+  toast.error('Failed to delete product');
+}
+
+setDeleteId(null);
 
   const stats = {
     total: products.length,
