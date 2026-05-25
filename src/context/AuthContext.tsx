@@ -1,5 +1,8 @@
 // Authentication Context Provider - supports both Firebase and Demo mode
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase/config';
+import { getUserProfile } from '../firebase/auth';
 
 export interface UserProfile {
   uid: string;
@@ -37,34 +40,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Demo mode: load user from localStorage
-    const loadUser = () => {
-      try {
-        const stored = localStorage.getItem('smartpos-demo-user');
-        if (stored) {
-          setUserProfile(JSON.parse(stored));
-        }
-      } catch {
-        setUserProfile(null);
-      } finally {
-        setLoading(false);
+
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+
+    if (user) {
+
+      const profile = await getUserProfile(user.uid);
+
+      if (profile) {
+        setUserProfile(profile);
+
+      } else {
+
+        // fallback profile
+        setUserProfile({
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || 'Admin',
+          role: 'admin',
+          isActive: true,
+          createdAt: new Date()
+        });
       }
-    };
 
-    loadUser();
+    } else {
+      setUserProfile(null);
+    }
 
-    // Listen for storage changes (login/logout)
-    const handleStorage = () => loadUser();
-    window.addEventListener('storage', handleStorage);
-    
-    // Also listen for custom auth events
-    window.addEventListener('smartpos-auth', handleStorage);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('smartpos-auth', handleStorage);
-    };
-  }, []);
+    setLoading(false);
+  });
+
+  return () => unsubscribe();
+
+}, []);
 
   const value: AuthContextType = {
     currentUser: userProfile,
