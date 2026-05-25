@@ -15,28 +15,24 @@ export default function Login() {
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-  // Try Firebase auth first
-  await signIn(email, password);
+  try {
+    // Try Firebase auth first
+    await signIn(email, password);
 
-  toast.success('Welcome back!');
-  navigate('/dashboard');
+    toast.success('Welcome back!');
+    navigate('/dashboard');
 
-} catch (err: any) {
-  console.error(err);
-  setError('Invalid email or password');
-} finally {
-  setLoading(false);
-}
-    
-      setError('Invalid email or password.');
-    } finally {
-      setLoading(false);
-    }
+  } catch (err: any) {
+    console.error(err);
+    setError('Invalid email or password');
+  } finally {
+    setLoading(false);
+  }
+};
   };
 
   return (
