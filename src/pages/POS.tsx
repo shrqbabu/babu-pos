@@ -1,7 +1,6 @@
 import { useAuth } from '../context/AuthContext';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Layout } from '../components/layout/Layout';
 import { useApp, Product, CartItem } from '../context/AppContext';
@@ -31,7 +30,7 @@ export default function POS() {
   const { currentUser } = useAuth();
   const { cart, addToCart, removeFromCart, updateCartQty, updateCartDiscount, clearCart,
     cartTotal, cartTax, cartSubtotal, cartDiscount } = useApp();
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
@@ -46,37 +45,31 @@ export default function POS() {
   const [processing, setProcessing] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Products - use demo data
   const [products, setProducts] = useState<Product[]>([]);
+
   useEffect(() => {
-  const fetchProducts = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, 'products'));
-
-      if (!snapshot.empty) {
-        const firebaseProducts = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Product[];
-
-        setProducts(firebaseProducts);
-
-      } else {
+    const fetchProducts = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'products'));
+        if (!snapshot.empty) {
+          const firebaseProducts = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Product[];
+          setProducts(firebaseProducts);
+        } else {
+          setProducts(DEMO_PRODUCTS);
+        }
+      } catch (error) {
+        console.error(error);
         setProducts(DEMO_PRODUCTS);
       }
+    };
+    fetchProducts();
+  }, []);
 
-    } catch (error) {
-      console.error(error);
-
-      setProducts(DEMO_PRODUCTS);
-    }
-  };
-
-  fetchProducts();
-}, []);
   const categories = [{ id: 'all', name: 'All Items', icon: '🏪' }, ...DEMO_CATEGORIES];
 
-  // Filter products
   const filteredProducts = products.filter(p => {
     const matchesSearch = !searchQuery ||
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -85,7 +78,6 @@ export default function POS() {
     return matchesSearch && matchesCategory && p.status === 'active';
   });
 
-  // Barcode scanning simulation
   useEffect(() => {
     let barcodeBuffer = '';
     let lastKeyTime = Date.now();
@@ -162,7 +154,6 @@ export default function POS() {
         createdAt: new Date()
       };
 
-      // Save to localStorage for demo mode
       await addDoc(collection(db, 'orders'), order);
 
       setLastOrder(order);
@@ -175,9 +166,9 @@ export default function POS() {
       toast.success('Payment processed successfully!');
     } catch {
       toast.error('Failed to process payment');
-    } finally {
-      setProcessing(false);
     }
+
+    setProcessing(false);
   };
 
   const handlePrintReceipt = () => {
@@ -189,7 +180,6 @@ export default function POS() {
       <div className="flex gap-4 h-[calc(100vh-8rem)]">
         {/* Left - Products Panel */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Search & Filters */}
           <div className="mb-4 space-y-3">
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -206,7 +196,6 @@ export default function POS() {
               <Barcode className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
             </div>
 
-            {/* Category Filter */}
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {categories.map(cat => (
                 <button
@@ -218,14 +207,13 @@ export default function POS() {
                       : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-indigo-300'
                     }`}
                 >
-                  {('icon' in cat) && <span>{(cat as any).icon}</span>}
+                  {'icon' in cat && <span>{(cat as any).icon}</span>}
                   {cat.name}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Products Grid */}
           <div className="flex-1 overflow-y-auto">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredProducts.map((product) => (
@@ -239,7 +227,6 @@ export default function POS() {
                       : 'border-slate-100 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md active:scale-95'
                     }`}
                 >
-                  {/* Product Image / Icon */}
                   <div className={`w-full aspect-square rounded-lg mb-3 flex items-center justify-center text-2xl
                     ${product.stock === 0 ? 'bg-slate-50 dark:bg-slate-700' : 'bg-indigo-50 dark:bg-indigo-500/10'}`}>
                     {product.image
@@ -250,7 +237,7 @@ export default function POS() {
 
                   <p className="text-xs font-semibold text-slate-800 dark:text-white truncate mb-1">{product.name}</p>
                   <p className="text-xs text-slate-400 mb-2">{product.category}</p>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">₹{product.price}</span>
                     {product.stock === 0
@@ -261,7 +248,6 @@ export default function POS() {
                     }
                   </div>
 
-                  {/* Add overlay */}
                   {product.stock > 0 && (
                     <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/5 rounded-xl transition-colors flex items-center justify-center">
                       <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center
@@ -287,7 +273,6 @@ export default function POS() {
 
         {/* Right - Cart Panel */}
         <div className="w-80 xl:w-96 flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex-shrink-0">
-          {/* Cart Header */}
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-4 h-4 text-indigo-600" />
@@ -305,7 +290,6 @@ export default function POS() {
             )}
           </div>
 
-          {/* Customer Selection */}
           <div className="px-4 py-2.5 border-b border-slate-50 dark:border-slate-700/50">
             <div className="relative">
               <button
@@ -363,7 +347,6 @@ export default function POS() {
             </div>
           </div>
 
-          {/* Cart Items */}
           <div className="flex-1 overflow-y-auto">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 px-4">
@@ -389,9 +372,7 @@ export default function POS() {
             )}
           </div>
 
-          {/* Cart Footer */}
           <div className="border-t border-slate-100 dark:border-slate-700 p-4 space-y-3">
-            {/* Global Discount */}
             <div className="flex items-center gap-2">
               <Percent className="w-4 h-4 text-slate-400" />
               <span className="text-xs text-slate-500 flex-1">Global Discount</span>
@@ -412,7 +393,6 @@ export default function POS() {
               </div>
             </div>
 
-            {/* Totals */}
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>Subtotal</span>
@@ -438,7 +418,6 @@ export default function POS() {
               </div>
             </div>
 
-            {/* Payment Method */}
             <div className="grid grid-cols-3 gap-2">
               {[
                 { method: 'cash' as const, icon: Banknote, label: 'Cash' },
@@ -460,7 +439,6 @@ export default function POS() {
               ))}
             </div>
 
-            {/* Cash received input */}
             {paymentMethod === 'cash' && (
               <div className="space-y-1.5">
                 <input
@@ -483,7 +461,6 @@ export default function POS() {
               </div>
             )}
 
-            {/* Charge button */}
             <Button
               fullWidth
               size="lg"
@@ -543,7 +520,6 @@ export default function POS() {
         </div>
       </Modal>
 
-      {/* Receipt Modal */}
       {lastOrder && (
         <ReceiptModal
           isOpen={showReceiptModal}
@@ -570,10 +546,14 @@ function CartItemRow({ item, onQtyChange, onRemove, onDiscountChange }: {
     <div className="px-4 py-3">
       <div className="flex items-start gap-3">
         <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-          <span className="text-sm">{DEMO_CATEGORIES.find(c => {
-            const p = DEMO_PRODUCTS.find(p => p.id === item.productId);
-            return p && c.id === p.categoryId;
-          })?.icon || '📦'}</span>
+          {/* ✅ FIX 1: Nested .find().find() tha — esbuild "." parse nahi kar pa raha tha */}
+          <span className="text-sm">
+            {(() => {
+              const prod = DEMO_PRODUCTS.find(p => p.id === item.productId);
+              const cat = prod ? DEMO_CATEGORIES.find(c => c.id === prod.categoryId) : null;
+              return cat?.icon || '📦';
+            })()}
+          </span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
@@ -583,9 +563,8 @@ function CartItemRow({ item, onQtyChange, onRemove, onDiscountChange }: {
             </button>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">₹{item.price} × {item.quantity}</p>
-          
+
           <div className="flex items-center justify-between mt-2">
-            {/* Quantity controls */}
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-0.5">
               <button
                 onClick={() => onQtyChange(item.quantity - 1)}
@@ -603,7 +582,6 @@ function CartItemRow({ item, onQtyChange, onRemove, onDiscountChange }: {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Item discount */}
               <button
                 onClick={() => setShowDiscount(!showDiscount)}
                 className={`text-xs px-1.5 py-0.5 rounded-md transition-colors flex items-center gap-1
@@ -659,9 +637,7 @@ function ReceiptModal({ isOpen, onClose, order, onPrint }: {
         <p className="text-xs text-slate-400 mt-1">Order {order.orderId}</p>
       </div>
 
-      {/* Receipt */}
       <div id="receipt" className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 text-xs space-y-3">
-        {/* Store info */}
         <div className="text-center border-b border-dashed border-slate-200 dark:border-slate-700 pb-3">
           <p className="font-bold text-sm text-slate-900 dark:text-white">{DEMO_SETTINGS.storeName}</p>
           <p className="text-slate-400">{DEMO_SETTINGS.storeAddress}</p>
