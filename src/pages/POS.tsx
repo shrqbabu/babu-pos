@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
@@ -27,6 +28,7 @@ const generateOrderId = () => {
 type PaymentMethod = 'cash' | 'upi' | 'card';
 
 export default function POS() {
+  const { currentUser } = useAuth();
   const { cart, addToCart, removeFromCart, updateCartQty, updateCartDiscount, clearCart,
     cartTotal, cartTax, cartSubtotal, cartDiscount } = useApp();
   
@@ -155,7 +157,7 @@ export default function POS() {
         customerId: selectedCustomer?.id || null,
         customerName: selectedCustomer?.name || 'Walk-in Customer',
         customerPhone: selectedCustomer?.phone || null,
-        currentUser.displayName,
+        cashierName: currentUser?.displayName || 'Admin',
         status: 'completed',
         createdAt: new Date()
       };
