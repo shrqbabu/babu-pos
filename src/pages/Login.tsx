@@ -36,18 +36,14 @@ export default function Login() {
   setLoading(true);
 
   try {
-    await signIn(email, password);
-    toast.success('Welcome back!');
+  await signIn(email, password);
 
-    // ✅ onAuthStateChanged ka wait karo navigate se pehle
-   onAuthChange((user) => {
-  if (user) {
-    setLoading(false);
-    navigate('/dashboard', { replace: true });
-  }
-});
+  toast.success('Welcome back!');
+  setLoading(false);
 
-  } catch (err: any) {
+  navigate('/dashboard', { replace: true });
+
+} catch (err: any) {
     console.error(err);
     setError(getFirebaseError(err?.code || ''));
     setLoading(false);
