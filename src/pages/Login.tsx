@@ -30,22 +30,30 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+ const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      await signIn(email, password);
-      toast.success('Welcome back!');
-      setLoading(false);
-      navigate('/Dashboard');
-    } catch (err: any) {
-      console.error(err);
-      setError(getFirebaseError(err?.code || ''));
-      setLoading(false);
-    }
-  };
+  try {
+    await signIn(email, password);
+    toast.success('Welcome back!');
+
+    // ✅ onAuthStateChanged ka wait karo navigate se pehle
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubscribe();
+        setLoading(false);
+        navigate('/dashboard', { replace: true });
+      }
+    });
+
+  } catch (err: any) {
+    console.error(err);
+    setError(getFirebaseError(err?.code || ''));
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex">
